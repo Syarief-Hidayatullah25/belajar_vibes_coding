@@ -2,6 +2,8 @@
 
 Project contoh dengan arsitektur **decoupled**: Frontend React (Vite) dan Backend Laravel (REST API) berjalan sebagai dua service terpisah, memakai PostgreSQL sebagai database.
 
+> Butuh sistem POS restoran (MICRODINE)? Lihat [`microdine/`](microdine/README.md) — produk terpisah di repo ini dengan backend Laravel + PostgreSQL (Sanctum, RBAC, payment gateway, analitik).
+
 ```
 .
 ├── frontend/        # React + Vite (Bun)  -> http://localhost:5173
