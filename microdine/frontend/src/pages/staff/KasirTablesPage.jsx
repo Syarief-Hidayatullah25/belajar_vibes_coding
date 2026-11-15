@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import QRCode from 'qrcode'
 import { api } from '../../lib/api'
 import { rupiah } from '../../lib/format'
 import { usePolling } from '../../hooks/usePolling'
-import { Alert, Empty, Spinner } from '../../components/ui'
+import { useRealtime } from '../../lib/realtime'
+import { Alert, Empty, LiveBadge, Spinner } from '../../components/ui'
 
 function QrModal({ table, onClose }) {
   const [dataUrl, setDataUrl] = useState(null)
@@ -230,7 +231,19 @@ function ManualOrderModal({ tables, initialTable, onClose, onDone }) {
 }
 
 export function KasirTablesPage() {
-  const { data: tables, error, loading, refresh } = usePolling(() => api.tables(), { intervalMs: 5000 })
+  const refreshRef = useRef(null)
+
+  const realtime = useRealtime(['orders'], {
+    OrderPaid: () => refreshRef.current?.({ silent: true }),
+    OrderStatusUpdated: () => refreshRef.current?.({ silent: true }),
+  })
+
+  const { data: tables, error, loading, refresh } = usePolling(() => api.tables(), {
+    intervalMs: realtime === 'connected' ? 20000 : 5000,
+  })
+
+  refreshRef.current = refresh
+
   const [qrTable, setQrTable] = useState(null)
   const [manualFor, setManualFor] = useState(undefined)
   const [actionError, setActionError] = useState(null)
@@ -255,7 +268,9 @@ export function KasirTablesPage() {
     <div className="page">
       <header className="page__head">
         <div>
-          <h1>Manajemen Meja</h1>
+          <h1>
+            Manajemen Meja <LiveBadge state={realtime} />
+          </h1>
           <p className="muted small">Hijau = tersedia, merah = terisi. Diperbarui tiap 5 detik.</p>
         </div>
         <button type="button" className="button button--primary" onClick={() => setManualFor(null)}>

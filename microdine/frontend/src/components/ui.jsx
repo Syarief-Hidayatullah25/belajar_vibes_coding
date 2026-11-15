@@ -33,3 +33,23 @@ export function Spinner({ label = 'Memuat…' }) {
 export function Empty({ children }) {
   return <p className="empty">{children}</p>
 }
+
+const LIVE_LABEL = {
+  connected: 'Live',
+  connecting: 'Menyambung…',
+  disconnected: 'Terputus',
+  disabled: 'Polling',
+  unavailable: 'Polling',
+}
+
+/** Indikator status WebSocket: Live = real-time, Polling = fallback. */
+export function LiveBadge({ state }) {
+  const label = LIVE_LABEL[state] ?? 'Polling'
+  const tone = state === 'connected' ? 'live' : state === 'connecting' || state === 'disconnected' ? 'warn' : 'subtle'
+
+  return (
+    <span className={`badge badge--${tone}`} title={`Status realtime: ${state}`}>
+      {label}
+    </span>
+  )
+}

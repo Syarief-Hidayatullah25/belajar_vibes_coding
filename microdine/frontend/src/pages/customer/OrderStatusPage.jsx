@@ -4,7 +4,8 @@ import QRCode from 'qrcode'
 import { api } from '../../lib/api'
 import { durasi, jam, rupiah, LABEL } from '../../lib/format'
 import { usePolling } from '../../hooks/usePolling'
-import { Alert, Spinner, StatusBadge } from '../../components/ui'
+import { useRealtime } from '../../lib/realtime'
+import { Alert, LiveBadge, Spinner, StatusBadge } from '../../components/ui'
 
 const STEPS = [
   { key: 'pending', label: 'Menunggu Bayar' },
@@ -24,10 +25,31 @@ function stepIndex(order) {
 
 export function OrderStatusPage() {
   const { orderNumber } = useParams()
+  const refreshRef = useRef(null)
+  const [pollMs, setPollMs] = useState(4000)
+
   const { data: order, error, loading, refresh } = usePolling(() => api.getOrder(orderNumber), {
-    intervalMs: 4000,
+    intervalMs: pollMs,
     deps: [orderNumber],
   })
+
+  refreshRef.current = refresh
+
+  // Cukup channel pesanan ini saja: backend memancarkan event ke `orders` dan
+  // `order.{id}`, dan berlangganan keduanya akan memproses event dua kali.
+  const realtime = useRealtime(
+    order ? [`order.${order.id}`] : [],
+    {
+      OrderPaid: () => refreshRef.current?.({ silent: true }),
+      OrderStatusUpdated: () => refreshRef.current?.({ silent: true }),
+    },
+    Boolean(order),
+  )
+
+  // Saat WebSocket tersambung, polling dilonggarkan jadi jaring pengaman saja.
+  useEffect(() => {
+    setPollMs(realtime === 'connected' ? 30000 : 4000)
+  }, [realtime])
 
   const [qrDataUrl, setQrDataUrl] = useState(null)
   const [remaining, setRemaining] = useState(null)
@@ -100,6 +122,13 @@ export function OrderStatusPage() {
         </div>
         <StatusBadge kind="payment_status" value={order.payment_status} />
       </header>
+
+      <p className="muted small">
+        <LiveBadge state={realtime} />{' '}
+        {realtime === 'connected'
+          ? 'Status diperbarui real-time.'
+          : 'Status diperbarui otomatis tiap 4 detik.'}
+      </p>
 
       {isExpired && (
         <Alert>
@@ -204,7 +233,7 @@ export function OrderStatusPage() {
       )}
 
       <p className="muted small center">
-        Halaman ini memperbarui status otomatis setiap 4 detik.
+        Halaman ini memperbarui status otomatis {realtime === 'connected' ? 'lewat WebSocket' : 'setiap 4 detik'}.
       </p>
     </div>
   )

@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { api } from '../../lib/api'
 import { jam, waktuLalu, LABEL } from '../../lib/format'
 import { usePolling } from '../../hooks/usePolling'
-import { Alert, Empty, Spinner } from '../../components/ui'
+import { useRealtime } from '../../lib/realtime'
+import { Alert, Empty, LiveBadge, Spinner } from '../../components/ui'
 
 const COLUMNS = [
   { key: 'waiting', title: 'Antrean Baru', action: 'cooking', actionLabel: 'Mulai Masak' },
@@ -11,7 +12,21 @@ const COLUMNS = [
 ]
 
 export function KitchenPage() {
-  const { data, error, loading, refresh } = usePolling(() => api.queue('kitchen'), { intervalMs: 3000 })
+  const refreshRef = useRef(null)
+
+  // WebSocket: event OrderPaid / OrderStatusUpdated langsung memicu refresh.
+  const realtime = useRealtime(['orders'], {
+    OrderPaid: () => refreshRef.current?.({ silent: true }),
+    OrderStatusUpdated: () => refreshRef.current?.({ silent: true }),
+  })
+
+  // Polling jadi jaring pengaman; saat WebSocket tersambung interval dilonggarkan.
+  const { data, error, loading, refresh } = usePolling(() => api.queue('kitchen'), {
+    intervalMs: realtime === 'connected' ? 20000 : 3000,
+  })
+
+  refreshRef.current = refresh
+
   const [busyId, setBusyId] = useState(null)
   const [actionError, setActionError] = useState(null)
 
@@ -36,8 +51,12 @@ export function KitchenPage() {
   return (
     <div className="kitchen">
       <header className="kitchen__head">
-        <h1>Kitchen Display</h1>
-        <p className="muted small">Hanya pesanan lunas. Diperbarui tiap 3 detik.</p>
+        <h1>
+          Kitchen Display <LiveBadge state={realtime} />
+        </h1>
+        <p className="muted small">
+          Hanya pesanan lunas. {realtime === 'connected' ? 'Real-time via WebSocket.' : 'Diperbarui tiap 3 detik.'}
+        </p>
       </header>
 
       {error && <Alert>{error.message}</Alert>}

@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { api } from '../../lib/api'
 import { rupiah, jam, waktuLalu, LABEL } from '../../lib/format'
 import { usePolling } from '../../hooks/usePolling'
-import { Alert, Empty, Spinner } from '../../components/ui'
+import { useRealtime } from '../../lib/realtime'
+import { Alert, Empty, LiveBadge, Spinner } from '../../components/ui'
 
 const COLUMNS = [
   { key: 'waiting_payment', title: 'Menunggu Pembayaran' },
@@ -166,7 +167,19 @@ function OrderCard({ order, onAcceptCash, onKitchenStatus, busy }) {
 }
 
 export function KasirQueuePage() {
-  const { data, error, loading, refresh } = usePolling(() => api.queue('kasir'), { intervalMs: 4000 })
+  const refreshRef = useRef(null)
+
+  const realtime = useRealtime(['orders'], {
+    OrderPaid: () => refreshRef.current?.({ silent: true }),
+    OrderStatusUpdated: () => refreshRef.current?.({ silent: true }),
+  })
+
+  const { data, error, loading, refresh } = usePolling(() => api.queue('kasir'), {
+    intervalMs: realtime === 'connected' ? 20000 : 4000,
+  })
+
+  refreshRef.current = refresh
+
   const [cashOrder, setCashOrder] = useState(null)
   const [busyId, setBusyId] = useState(null)
   const [actionError, setActionError] = useState(null)
@@ -192,8 +205,14 @@ export function KasirQueuePage() {
     <div className="page">
       <header className="page__head">
         <div>
-          <h1>Antrean Kasir</h1>
-          <p className="muted small">Diperbarui otomatis setiap 4 detik.</p>
+          <h1>
+            Antrean Kasir <LiveBadge state={realtime} />
+          </h1>
+          <p className="muted small">
+            {realtime === 'connected'
+              ? 'Real-time via WebSocket; polling 20 detik sebagai cadangan.'
+              : 'Diperbarui otomatis setiap 4 detik.'}
+          </p>
         </div>
         <button type="button" className="button" onClick={() => refresh()}>
           Muat ulang

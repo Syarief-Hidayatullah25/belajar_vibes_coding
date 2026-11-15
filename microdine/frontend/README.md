@@ -15,11 +15,17 @@ bun install
 bun run dev          # http://localhost:5173
 ```
 
-Butuh backend di `http://localhost:8000` (lihat `../backend`). Base URL API ada di `.env`:
+Butuh backend di `http://localhost:8000` (lihat `../backend`) dan Reverb di `http://127.0.0.1:8080` untuk real-time. Base URL dan kredensial WebSocket ada di `.env`:
 
 ```
 VITE_API_BASE_URL=http://localhost:8000/api/v1
+VITE_REVERB_APP_KEY=microdinekey
+VITE_REVERB_HOST=127.0.0.1
+VITE_REVERB_PORT=8080
+VITE_REVERB_SCHEME=http
 ```
+
+`VITE_REVERB_*` **harus sama** dengan `REVERB_*` di `../backend/.env`. Bila Reverb mati atau key kosong, UI otomatis memakai polling dan menampilkan badge **Polling** (bukan **Live**).
 
 Akun staf demo (password `password`): `admin`, `kasir`, `kitchen`.
 
@@ -57,7 +63,7 @@ src/
 Catatan penting:
 
 - **RBAC di UI bersifat kosmetik.** Backend tetap menolak (403) setiap request yang role-nya tidak berhak; guard di frontend hanya mencegah salah navigasi.
-- **Real-time masih polling.** `OrderPaid`/`OrderStatusUpdated` sudah dipancarkan backend, tapi driver broadcast masih `log`, jadi UI memakai polling (3–5 detik). Saat Reverb dipasang, cukup ganti isi `usePolling` dengan listener WebSocket — komponen tidak berubah.
+- **Real-time memakai WebSocket (Reverb).** KDS, Kanban kasir, grid meja, dan tracker pelanggan berlangganan channel `orders` / `order.{id}` lewat `src/lib/realtime.js`. Polling tetap jalan sebagai jaring pengaman dengan interval 20–30 detik saat WebSocket tersambung, dan kembali 3–5 detik bila terputus.
 - **Ekspor CSV tidak bisa lewat `<a href>`** karena butuh header `Authorization`, jadi diunduh lewat `fetch` lalu dibuat blob.
 
 ## Verifikasi
@@ -69,4 +75,6 @@ bun scripts/browser-check.mjs # verifikasi di browser sungguhan
 
 `browser-check.mjs` memakai Playwright dengan Edge yang sudah terpasang (tanpa unduh browser) dan menjalankan alur nyata: pesan dari meja → bayar via webhook mock → cek halaman status ter-update tanpa reload → login kasir/admin/kitchen → telusuri semua halaman → uji guard RBAC. Error console/page dikumpulkan dan menggagalkan skrip. Screenshot tersimpan di `.screens/` (tidak di-commit).
 
-Prasyarat menjalankannya: backend `:8000` dan dev server `:5173` hidup, database baru di-seed (`php artisan migrate:fresh --seed`).
+Bagian real-time diukur, bukan sekadar "berjalan": KDS dibiarkan terbuka dengan badge **Live**, lalu satu pesanan dibayar. Karena interval polling saat tersambung 20 detik, tiket yang muncul di bawah 3 detik hanya mungkin datang dari WebSocket (hasil run terakhir: **369 ms**).
+
+Prasyarat menjalankannya: backend `:8000`, Reverb `:8080`, dan dev server `:5173` hidup, database baru di-seed (`php artisan migrate:fresh --seed`).

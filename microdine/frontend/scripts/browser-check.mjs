@@ -187,7 +187,42 @@ try {
   await kitchen.getByRole('button', { name: 'Masuk' }).click()
   await kitchen.waitForURL(/\/staff\/kitchen/, { timeout: 15000 })
   check('login kitchen diarahkan ke KDS', true)
-  await kitchen.waitForTimeout(1500)
+
+  // ------------------------------------------------- WEBSocket vs polling
+  // Bukti real-time: KDS dibiarkan terbuka, lalu pesanan baru dibayar.
+  // Interval polling saat WebSocket tersambung 20 detik, jadi kemunculan kartu
+  // jauh di bawah itu hanya mungkin lewat event WebSocket.
+  const liveBadge = kitchen.locator('.badge--live')
+  await liveBadge.first().waitFor({ timeout: 15000 })
+  check('KDS tersambung ke Reverb (badge Live)', (await liveBadge.first().innerText()).trim() === 'Live')
+
+  const realtimeOrder = await fetch(`${API}/public/orders`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      qr_token: table.qr_token,
+      payment_method: 'qris',
+      items: [{ menu_id: orderDetail.items[0].menu_id, quantity: 2 }],
+    }),
+  }).then((response) => response.json())
+
+  const realtimeNumber = realtimeOrder.data.order_number
+  const realtimeRef = JSON.parse(realtimeOrder.data.qris_payload).ref_id
+
+  const realtimeBody = JSON.stringify({ ref_id: realtimeRef, status: 'paid' })
+  const realtimeSignature = createHmac('sha256', GATEWAY_SECRET).update(realtimeBody).digest('hex')
+
+  const startedAt = Date.now()
+  await fetch(`${API}/payments/webhook/qris`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Callback-Signature': realtimeSignature },
+    body: realtimeBody,
+  })
+
+  await kitchen.getByText(realtimeNumber).first().waitFor({ timeout: 15000 })
+  const latency = Date.now() - startedAt
+
+  check(`tiket muncul di KDS dalam ${latency} ms (< 3000 ms)`, latency < 3000, `${latency} ms`)
   await shot(kitchen, '11-kitchen')
 
   // --------------------------------------------------- guard: kitchen ke admin

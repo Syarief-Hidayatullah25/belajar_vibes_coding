@@ -6,6 +6,7 @@ Sistem POS restoran: pelanggan memindai QR meja, memesan, membayar (QRIS/tunai),
 | --- | --- |
 | `backend/` | ✅ API lengkap (Fase 1–3) — lihat di bawah |
 | `frontend/` | ✅ SPA pelanggan + portal staf (Fase 4–5) — lihat [`frontend/README.md`](frontend/README.md) |
+| real-time | ✅ Laravel Reverb (WebSocket), polling sebagai fallback |
 
 - Laravel 13 (API-only) + Sanctum + PostgreSQL
 - React 19 + Vite + React Router (Bun)
@@ -14,7 +15,7 @@ Sistem POS restoran: pelanggan memindai QR meja, memesan, membayar (QRIS/tunai),
 
 ## Menjalankan
 
-Dua terminal:
+Tiga terminal:
 
 ```powershell
 # Terminal 1 — backend
@@ -26,7 +27,11 @@ php artisan key:generate
 php artisan migrate:fresh --seed
 php -S 127.0.0.1:8000 -t public server.php
 
-# Terminal 2 — frontend
+# Terminal 2 — WebSocket (Reverb)
+cd backend
+php artisan reverb:start --host=127.0.0.1 --port=8080
+
+# Terminal 3 — frontend
 cd frontend
 bun install
 bun run dev                          # http://localhost:5173
@@ -136,9 +141,29 @@ php artisan orders:expire     # manual sekali jalan
 
 Pesanan `pending` yang melewati `expires_at` (default 15 menit, `ORDER_EXPIRY_MINUTES`) diubah menjadi `expired` dan dicatat di `order_status_logs`.
 
-## Real-time
+## Real-time (Laravel Reverb)
 
-Event `OrderPaid` dan `OrderStatusUpdated` sudah dipicu dan implement `ShouldBroadcast`. Default `BROADCAST_CONNECTION=log` (tanpa server tambahan). Untuk produksi, install Laravel Reverb dan ganti driver — channel publik (`orders`, `order.{id}`) cukup diganti `PrivateChannel` bila perlu otorisasi.
+Event `OrderPaid` dan `OrderStatusUpdated` dikirim lewat **WebSocket Reverb**. Keduanya memakai `ShouldBroadcastNow`, jadi langsung dikirim saat itu juga — bukan lewat queue (kalau memakai `ShouldBroadcast` + `QUEUE_CONNECTION=database` tanpa worker, event tidak akan pernah terkirim).
+
+Jalankan server Reverb di terminal ketiga:
+
+```powershell
+cd backend
+php artisan reverb:start --host=127.0.0.1 --port=8080
+```
+
+Kredensial harus sama di dua sisi:
+
+| Backend (`backend/.env`) | Frontend (`frontend/.env`) |
+| --- | --- |
+| `REVERB_APP_KEY` | `VITE_REVERB_APP_KEY` |
+| `REVERB_HOST` | `VITE_REVERB_HOST` |
+| `REVERB_PORT` | `VITE_REVERB_PORT` |
+| `REVERB_SCHEME` | `VITE_REVERB_SCHEME` |
+
+Channel bersifat publik: `orders` (semua pesanan) dan `order.{id}` (satu pesanan). Untuk produksi, ganti ke `PrivateChannel` + otorisasi di `routes/channels.php`.
+
+Bila Reverb tidak berjalan atau key kosong, UI otomatis jatuh ke polling (3–5 detik) dan menampilkan badge **Polling** alih-alih **Live**.
 
 ## Smoke test
 
