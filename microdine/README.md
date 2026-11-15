@@ -22,8 +22,10 @@ php artisan key:generate
 php artisan migrate:fresh --seed
 
 # 3. Jalankan API
-php artisan serve --host=127.0.0.1 --port=8000
+php -S 127.0.0.1:8000 -t public server.php
 ```
+
+`server.php` adalah router dev server: menyajikan file statis (gambar menu hasil upload di `public/uploads/menus`) lalu meneruskan sisanya ke Laravel. Kalau memakai `php artisan serve`, gambar upload tidak tersaji karena semua request diarahkan ke front controller.
 
 > Di mesin ini `php` default (Herd Lite) tidak punya `pdo_pgsql`, jadi gunakan PHP portabel repo:
 > `../../../.tools/php/php.exe artisan ...` dari folder `microdine/backend`.
@@ -73,6 +75,7 @@ Akun demo (password semuanya `password`):
 | --- | --- | --- |
 | CRUD | `/admin/categories` | kategori menu |
 | CRUD | `/admin/menus` | menu + HPP + harga jual |
+| POST | `/admin/menus/{menu}/image` | upload gambar menu (jpg/png/webp, maks 2 MB) |
 | CRUD | `/admin/staff` | akun kasir & dapur (role admin tidak bisa dibuat di sini) |
 | GET | `/admin/analytics/dashboard` | KPI, tren 14 hari, rasio metode, top menu |
 | GET | `/admin/analytics/reports` | audit transaksi + HPP + laba |

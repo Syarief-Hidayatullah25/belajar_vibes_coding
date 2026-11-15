@@ -54,6 +54,7 @@ Route::prefix('v1')->group(function () {
         Route::prefix('admin')->middleware('role:admin')->group(function () {
             Route::apiResource('categories', CategoryController::class);
             Route::apiResource('menus', MenuController::class);
+            Route::post('menus/{menu}/image', [MenuController::class, 'uploadImage']);
             Route::apiResource('staff', StaffController::class);
 
             Route::get('analytics/dashboard', DashboardController::class);

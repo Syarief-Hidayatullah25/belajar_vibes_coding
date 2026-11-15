@@ -48,6 +48,37 @@ class MenuController extends Controller
     }
 
     /**
+     * POST /api/v1/admin/menus/{menu}/image
+     *
+     * Upload gambar menu. Disimpan di public/uploads/menus agar tidak perlu
+     * symlink storage (mudah untuk dev di Windows).
+     */
+    public function uploadImage(Request $request, Menu $menu): JsonResponse
+    {
+        $request->validate([
+            'image' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+        ]);
+
+        $file = $request->file('image');
+        $filename = sprintf('menu-%d-%s.%s', $menu->id, bin2hex(random_bytes(4)), $file->getClientOriginalExtension());
+
+        $directory = public_path('uploads/menus');
+        if (! is_dir($directory)) {
+            mkdir($directory, 0775, true);
+        }
+
+        file_put_contents($directory.DIRECTORY_SEPARATOR.$filename, $file->getContent());
+
+        $menu->update(['image_url' => '/uploads/menus/'.$filename]);
+
+        return ApiResponse::ok([
+            'id' => $menu->id,
+            'image_url' => $menu->image_url,
+            'public_url' => url($menu->image_url),
+        ], 'Gambar menu diunggah.');
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private function validatedPayload(Request $request, bool $partial = false): array
