@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+vendor/
+
+# Environment (jangan commit nilai asli)
+.env
+.env.*
+!.env.example
+
+# Build output
+frontend/dist/
+
+# Toolchain portabel & data runtime lokal mesin (lihat README)
+.tools/
+.data/
+.composer-home/
+
+# Laravel runtime
+backend/storage/*.key
+backend/storage/logs/*.log
+backend/bootstrap/cache/*.php
+backend/bootstrap/cache/*.php.lock
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
