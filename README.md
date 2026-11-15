@@ -105,3 +105,14 @@ Error:
 2. Semua panggilan lewat `frontend/src/lib/api.js` (membungkus `fetch`, menormalkan error).
 3. Backend memvalidasi request → akses PostgreSQL lewat Eloquent → balas JSON.
 4. Halaman utama (`frontend/src/App.jsx`) menampilkan status `/api/health` dan CRUD `items`.
+
+## Deploy
+
+Deploy permanen **belum dilakukan** dan butuh akun platform (Railway/Render untuk Laravel + PostgreSQL, Vercel/Netlify untuk frontend). Ringkasan opsi yang sudah diuji:
+
+- **Railway + Vercel** — jalur paling sedikit konfigurasi (Railway memakai nixpacks, tidak perlu Dockerfile), tetapi wajib login akun.
+- **GitHub Pages untuk frontend** — bisa tanpa akun baru, tetapi harus mengaktifkan Pages di Settings → Pages (atau token dengan izin Pages). Percobaan lewat API gagal `403` karena izin token tidak mencakup Pages.
+- **Cloudflare Quick Tunnel** — satu-satunya cara tanpa akun; cukup `cloudflared tunnel --url http://127.0.0.1:<port>`. Sifatnya **sementara**: URL acak baru setiap start, hanya hidup selama mesin dan proses cloudflared berjalan, dan API tetap berjalan di laptop. Bukan pengganti hosting.
+
+Bila memakai tunnel, ingat: `VITE_API_BASE_URL` tertanam saat build, jadi frontend harus di-build ulang setiap URL tunnel backend berubah, dan origin tunnel frontend harus ada di `FRONTEND_URL` Backend agar CORS lolos.
+
