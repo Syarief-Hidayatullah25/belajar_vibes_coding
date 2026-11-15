@@ -1,28 +1,35 @@
-# MICRODINE — Backend API
+# MICRODINE
 
-Backend REST API untuk sistem POS restoran MICRODINE: pelanggan memindai QR meja, memesan, membayar (QRIS/tunai), dapur mengolah, kasir menutup sesi, admin melihat laba.
+Sistem POS restoran: pelanggan memindai QR meja, memesan, membayar (QRIS/tunai), dapur mengolah, kasir menutup sesi, admin melihat laba.
 
-Status: **Fase 1–3 (backend) + fondasi real-time selesai.** Frontend SPA (Fase 4–5) belum dikerjakan.
+| Bagian | Status |
+| --- | --- |
+| `backend/` | ✅ API lengkap (Fase 1–3) — lihat di bawah |
+| `frontend/` | ✅ SPA pelanggan + portal staf (Fase 4–5) — lihat [`frontend/README.md`](frontend/README.md) |
 
 - Laravel 13 (API-only) + Sanctum + PostgreSQL
+- React 19 + Vite + React Router (Bun)
 - Semua endpoint di bawah `/api/v1`
 - Envelope response: `{ success, data, message }` / error `{ success, message, errors }`
 
 ## Menjalankan
 
-```powershell
-# 1. PostgreSQL lokal project (portabel, dari root repo)
-pwsh ../scripts/db-start.ps1
+Dua terminal:
 
-# 2. Siapkan aplikasi
-cd microdine/backend
+```powershell
+# Terminal 1 — backend
+pwsh ../scripts/db-start.ps1        # PostgreSQL portabel (dari root repo)
+cd backend
 composer install
 cp .env.example .env
 php artisan key:generate
 php artisan migrate:fresh --seed
-
-# 3. Jalankan API
 php -S 127.0.0.1:8000 -t public server.php
+
+# Terminal 2 — frontend
+cd frontend
+bun install
+bun run dev                          # http://localhost:5173
 ```
 
 `server.php` adalah router dev server: menyajikan file statis (gambar menu hasil upload di `public/uploads/menus`) lalu meneruskan sisanya ke Laravel. Kalau memakai `php artisan serve`, gambar upload tidak tersaji karena semua request diarahkan ke front controller.

@@ -138,6 +138,8 @@ section('Pengaturan & katalog publik');
 $settings = request('GET', '/settings', null, $admin);
 check('GET settings 200', $settings['status'] === 200, $settings['body']);
 
+$originalRestaurantName = $settings['body']['data']['restaurant_name'] ?? 'MICRODINE';
+
 $updatedSettings = request('PUT', '/settings', [
     'restaurant_name' => 'MICRODINE Test',
     'tax_name' => 'PB1',
@@ -436,6 +438,9 @@ $createAdminViaStaff = request('POST', '/admin/staff', [
 check('role admin tidak bisa dibuat lewat endpoint staff 422', $createAdminViaStaff['status'] === 422, $createAdminViaStaff['body']);
 
 // -------------------------------------------------------------- Ringkasan
+// Kembalikan data demo yang diubah oleh uji agar tidak terlihat "kotor".
+request('PUT', '/settings', ['restaurant_name' => $originalRestaurantName], $admin);
+
 echo "\n----------------------------------------\n";
 echo "PASS: {$pass}   FAIL: {$fail}\n";
 

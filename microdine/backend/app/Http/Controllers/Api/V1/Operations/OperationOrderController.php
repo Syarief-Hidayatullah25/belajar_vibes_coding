@@ -89,6 +89,9 @@ class OperationOrderController extends Controller
             return ApiResponse::ok([
                 'screen' => 'kitchen',
                 'columns' => [
+                    // Pesanan lunas yang belum mulai dimasak — muncul agar dapur
+                    // bisa menekan "Mulai Masak" (waiting -> cooking).
+                    'waiting' => $paid->where('kitchen_status', Order::KITCHEN_WAITING)->values()->map($this->present(...)),
                     'cooking' => $paid->where('kitchen_status', Order::KITCHEN_COOKING)->values()->map($this->present(...)),
                     'ready' => $paid->where('kitchen_status', Order::KITCHEN_READY)->values()->map($this->present(...)),
                 ],
